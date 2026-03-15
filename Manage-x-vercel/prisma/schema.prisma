@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  AMT_HEAD
+  CHIEF_INSTRUCTOR
+  INSTRUCTOR
+  OBSERVER
+  MAINTENANCE
+}
+
+enum TaskStatus {
+  OVERDUE
+  APPROACHING
+  ON_TRACK
+  COMPLETED
+}
+
+enum CurriculumStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  departmentId String?
+  department   Department? @relation("DepartmentUsers", fields: [departmentId], references: [id])
+  chiefOf      Department? @relation("DepartmentChief")
+  tasks        Task[]    @relation("TaskOwner")
+  createdTasks Task[]    @relation("TaskCreator")
+  notifications Notification[]
+  maintenanceReports MaintenanceReport[] @relation("MaintenanceReporter")
+}
+
+model Department {
+  id                 String   @id @default(cuid())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  name               String   @unique
+  chiefInstructorId  String?
+  chiefInstructor    User?    @relation("DepartmentChief", fields: [chiefInstructorId], references: [id])
+  users              User[]   @relation("DepartmentUsers")
+  tasks              Task[]
+  curriculumUpdates  CurriculumUpdate[]
+  classes            Class[]
+  students           Student[]
+}
+
+model Class {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  name         String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+}
+
+model Student {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  name         String
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+}
+
+model Task {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  title        String
+  description  String
+  priority     Int
+  deadline     DateTime
+  status       TaskStatus
+  reflection   String?
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  ownerId      String
+  owner        User       @relation("TaskOwner", fields: [ownerId], references: [id])
+  createdById  String
+  createdBy    User       @relation("TaskCreator", fields: [createdById], references: [id])
+}
+
+model CurriculumUpdate {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  title        String
+  summary      String
+  version      String
+  status       CurriculumStatus
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  submittedById String
+  submittedBy  User       @relation(fields: [submittedById], references: [id])
+  approvedById String?
+  approvedBy   User?      @relation(fields: [approvedById], references: [id])
+}
+
+model MaintenanceReport {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  title       String
+  details     String
+  status      String
+  reporterId  String
+  reporter    User     @relation("MaintenanceReporter", fields: [reporterId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+  type      String
+  title     String
+  body      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
